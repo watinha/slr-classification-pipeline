@@ -3,13 +3,12 @@ import codecs, io
 from unittest import TestCase
 from unittest.mock import call, patch, Mock
 
-from lib.bib_loader import BibLoader
+from lib.bib_loader import load
 
 
 class BibLoaderTest(TestCase):
 
     def test_load_bibitem (self):
-        loader = BibLoader()
         bibtex_content = '''
 @ARTICLE{I[1],
   inserir = {true},
@@ -24,7 +23,7 @@ class BibLoaderTest(TestCase):
         file_stub.read = Mock(return_value=bibtex_content)
 
         with patch.object(codecs, 'open', return_value=file_stub) as cod:
-            X, y, years = loader.load(['abobrinha.bib'])
+            X, y, years = load(['abobrinha.bib'])
 
         cod.assert_called_once_with('abobrinha.bib', 'r', encoding='utf-8')
         self.assertEqual(X, ['abobrinha1\nabobrinha abstract'])
@@ -32,7 +31,6 @@ class BibLoaderTest(TestCase):
         self.assertEqual(years, [2008])
 
     def test_load_2_bibitems (self):
-        loader = BibLoader()
         bibtex_content = '''
 @ARTICLE{I[2],
   inserir = {true},
@@ -53,7 +51,7 @@ class BibLoaderTest(TestCase):
         file_stub.read = Mock(return_value=bibtex_content)
 
         with patch.object(codecs, 'open', return_value=file_stub) as cod:
-            X, y, years = loader.load(['pepino.bib'])
+            X, y, years = load(['pepino.bib'])
 
         cod.assert_called_once_with('pepino.bib', 'r', encoding='utf-8')
         self.assertEqual(X, [
@@ -63,7 +61,6 @@ class BibLoaderTest(TestCase):
         self.assertEqual(years, [2008, 2020])
 
     def test_load_option_for_titles_only (self):
-        loader = BibLoader(titles_only=True)
         bibtex_content = '''
 @ARTICLE{I[2],
   inserir = {true},
@@ -84,7 +81,7 @@ class BibLoaderTest(TestCase):
         file_stub.read = Mock(return_value=bibtex_content)
 
         with patch.object(codecs, 'open', return_value=file_stub) as cod:
-            X, y, years = loader.load(['pepino.bib'])
+            X, y, years = load(['pepino.bib'], titles_only=True)
 
         cod.assert_called_once_with('pepino.bib', 'r', encoding='utf-8')
         self.assertEqual(X, [
@@ -94,7 +91,6 @@ class BibLoaderTest(TestCase):
         self.assertEqual(years, [2008, 2020])
 
     def test_load_2_bibfiles (self):
-        loader = BibLoader()
         bibtex_content_1 = '''
 @ARTICLE{I[2],
   inserir = {true},
@@ -134,7 +130,7 @@ class BibLoaderTest(TestCase):
         files = [file_stub_1, file_stub_2]
 
         with patch.object(codecs, 'open', side_effect=files) as cod:
-            X, y, years = loader.load(['pepino.bib', 'abacaxi.bib'])
+            X, y, years = load(['pepino.bib', 'abacaxi.bib'])
 
         cod.assert_has_calls([
             call('pepino.bib', 'r', encoding='utf-8'),
@@ -148,7 +144,6 @@ class BibLoaderTest(TestCase):
         self.assertEqual(years, [2008, 2020, 2020, 2021])
 
     def test_load_2_bibfiles_and_sort_years (self):
-        loader = BibLoader()
         bibtex_content_1 = '''
 @ARTICLE{I[2],
   inserir = {true},
@@ -188,7 +183,7 @@ class BibLoaderTest(TestCase):
         files = [file_stub_1, file_stub_2]
 
         with patch.object(codecs, 'open', side_effect=files) as cod:
-            X, y, years = loader.load(['pepino.bib', 'abacaxi.bib'])
+            X, y, years = load(['pepino.bib', 'abacaxi.bib'])
 
         cod.assert_has_calls([
             call('pepino.bib', 'r', encoding='utf-8'),
