@@ -1,13 +1,13 @@
 from unittest import TestCase
 from unittest.mock import Mock
 
-from lib.stopwords_filter import StopWordsFilter
+from lib.stopwords_filter import FilterStrategy, StopwordsFilter
 
-class StopWordsFilterTest (TestCase):
+class FilterStrategyTest (TestCase):
 
     def test_filter_implements_pipeline (self):
         X = []
-        fil = StopWordsFilter()
+        fil = FilterStrategy(StopwordsFilter())
         s = fil.fit(X)
         res = fil.transform(X)
 
@@ -22,7 +22,7 @@ class StopWordsFilterTest (TestCase):
 
     def test_fit_transform(self):
         X = []
-        fil = StopWordsFilter()
+        fil = FilterStrategy(StopwordsFilter())
         fil.fit = Mock(return_value=fil)
         fil.transform = Mock(return_value=[1, 2, 3])
 
@@ -47,7 +47,7 @@ class StopWordsFilterTest (TestCase):
     def test_transform_removes_stopwords (self):
         X = ['Some other area of testing a single approach with twinkles',
              'Another Super Example of Fish under the Table with ketchup']
-        fil = StopWordsFilter()
+        fil = FilterStrategy(StopwordsFilter())
 
         res = fil.transform(X)
 
