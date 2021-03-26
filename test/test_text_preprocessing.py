@@ -1,7 +1,7 @@
 from unittest import TestCase
 from unittest.mock import Mock
 
-from lib.text_preprocessing import FilterStrategy, StopwordsFilter
+from lib.text_preprocessing import FilterStrategy, StopwordsFilter, LemmatizerFilter
 
 class FilterStrategyTest (TestCase):
 
@@ -19,6 +19,7 @@ class FilterStrategyTest (TestCase):
 
         self.assertEqual(fil, s)
         self.assertEqual([], res)
+
 
     def test_fit_transform(self):
         X = []
@@ -54,3 +55,15 @@ class FilterStrategyTest (TestCase):
         self.assertEqual([
             'area testing single approach twinkles',
             'another super example fish table ketchup'], res)
+
+
+    def test_transform_reduces_words_to_lemmas (self):
+        X = ['Testing an approach, based on typing on the keyboard',
+             'Evaluating multiple strategies for swimming in the pool']
+        fil = FilterStrategy(LemmatizerFilter())
+
+        res = fil.transform(X)
+
+        self.assertEqual([
+            'test an approach , base on type on the keyboard',
+            'evaluate multiple strategy for swim in the pool'], res)
