@@ -5,9 +5,7 @@ class BibLoader():
         pass
 
     def load(self, file_list):
-        X = []
-        y = []
-        years = []
+        dataset = []
         for f in file_list:
             with codecs.open(f, 'r', encoding='utf-8') as bib_f:
                 db = bibtexparser.load(bib_f)
@@ -17,7 +15,17 @@ class BibLoader():
                     abstract = entry['abstract']
                     year = int(entry['year'])
                     content = u'%s\n%s' % (title, abstract)
-                    X.append(content)
-                    y.append(label)
-                    years.append(year)
+                    dataset.append({
+                        'content': content,
+                        'label': label,
+                        'year': year
+                    })
+
+        def sort_criteria(row):
+            return row['year']
+        dataset.sort(key=sort_criteria)
+
+        X = [row['content'] for row in dataset]
+        y = [row['label'] for row in dataset]
+        years = [row['year'] for row in dataset]
         return X, y, years
