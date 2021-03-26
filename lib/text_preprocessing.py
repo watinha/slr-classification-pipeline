@@ -3,10 +3,10 @@ from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 
-class FilterStrategy ():
+class FilterComposite ():
 
-    def __init__ (self, strategy):
-        self._strategy = strategy
+    def __init__ (self, filters):
+        self._filters = filters
 
     def fit (self, X, y=None):
         return self
@@ -15,7 +15,10 @@ class FilterStrategy ():
         X_token = [ word_tokenize(row.lower()) for row in X ]
         X_filtered = []
         for tokens in X_token:
-            X_filtered.append(self._strategy.filter(tokens))
+            filtered_tokens = tokens
+            for f in self._filters:
+                filtered_tokens = f.filter(filtered_tokens)
+            X_filtered.append(filtered_tokens)
         return [ ' '.join(row) for row in  X_filtered]
 
     def fit_transform (self, X, y=None):

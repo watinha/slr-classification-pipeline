@@ -1,13 +1,13 @@
 from unittest import TestCase
 from unittest.mock import Mock
 
-from lib.text_preprocessing import FilterStrategy, StopwordsFilter, LemmatizerFilter
+from lib.text_preprocessing import FilterComposite, StopwordsFilter, LemmatizerFilter
 
-class FilterStrategyTest (TestCase):
+class FilterCompositeTest (TestCase):
 
     def test_filter_implements_pipeline (self):
         X = []
-        fil = FilterStrategy(StopwordsFilter())
+        fil = FilterComposite([StopwordsFilter()])
         s = fil.fit(X)
         res = fil.transform(X)
 
@@ -23,7 +23,7 @@ class FilterStrategyTest (TestCase):
 
     def test_fit_transform(self):
         X = []
-        fil = FilterStrategy(StopwordsFilter())
+        fil = FilterComposite([StopwordsFilter()])
         fil.fit = Mock(return_value=fil)
         fil.transform = Mock(return_value=[1, 2, 3])
 
@@ -48,7 +48,7 @@ class FilterStrategyTest (TestCase):
     def test_transform_removes_stopwords (self):
         X = ['Some other area of testing a single approach with twinkles',
              'Another Super Example of Fish under the Table with ketchup']
-        fil = FilterStrategy(StopwordsFilter())
+        fil = FilterComposite([StopwordsFilter()])
 
         res = fil.transform(X)
 
@@ -60,10 +60,26 @@ class FilterStrategyTest (TestCase):
     def test_transform_reduces_words_to_lemmas (self):
         X = ['Testing an approach, based on typing on the keyboard',
              'Evaluating multiple strategies for swimming in the pool']
-        fil = FilterStrategy(LemmatizerFilter())
+        fil = FilterComposite([LemmatizerFilter()])
 
         res = fil.transform(X)
 
         self.assertEqual([
             'test an approach , base on type on the keyboard',
             'evaluate multiple strategy for swim in the pool'], res)
+
+
+    def test_transform_reduces_words_to_lemmas (self):
+        X = ['Some other area of testing a single approach with twinkles',
+             'Another Super Example of Fish under the Table with ketchup',
+             'Testing an approach, based on typing on the keyboard',
+             'Evaluating multiple strategies for swimming in the pool']
+        fil = FilterComposite([StopwordsFilter(), LemmatizerFilter()])
+
+        res = fil.transform(X)
+
+        self.assertEqual([
+            'area test single approach twinkle',
+            'another super example fish table ketchup',
+            'test approach , base type keyboard',
+            'evaluate multiple strategy swim pool'], res)
