@@ -1,8 +1,8 @@
 import codecs, bibtexparser
 
 class BibLoader():
-    def __init__ (self):
-        pass
+    def __init__ (self, titles_only=False):
+        self._titles_only = titles_only
 
     def load(self, file_list):
         dataset = []
@@ -13,8 +13,11 @@ class BibLoader():
                     label = 1 if entry['inserir'] == 'true' else 0
                     title = entry['title']
                     abstract = entry['abstract']
+                    if (self._titles_only):
+                        content = u'%s' % (title)
+                    else:
+                        content = u'%s\n%s' % (title, abstract)
                     year = int(entry['year'])
-                    content = u'%s\n%s' % (title, abstract)
                     dataset.append({
                         'content': content,
                         'label': label,

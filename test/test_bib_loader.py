@@ -62,6 +62,37 @@ class BibLoaderTest(TestCase):
         self.assertEqual(y, [1, 0])
         self.assertEqual(years, [2008, 2020])
 
+    def test_load_option_for_titles_only (self):
+        loader = BibLoader(titles_only=True)
+        bibtex_content = '''
+@ARTICLE{I[2],
+  inserir = {true},
+  title = {abobrinha1},
+  year = {2008},
+  abstract = {abobrinha abstract},
+}
+@INPROCEEDINGS{E[2],
+  inserir = {false},
+  title = {umbrela},
+  year = {2020},
+  abstract = {another abstract},
+}
+        '''
+        file_stub = Mock()
+        file_stub.__enter__ = Mock(return_value=file_stub)
+        file_stub.__exit__ = Mock()
+        file_stub.read = Mock(return_value=bibtex_content)
+
+        with patch.object(codecs, 'open', return_value=file_stub) as cod:
+            X, y, years = loader.load(['pepino.bib'])
+
+        cod.assert_called_once_with('pepino.bib', 'r', encoding='utf-8')
+        self.assertEqual(X, [
+            'abobrinha1',
+            'umbrela'])
+        self.assertEqual(y, [1, 0])
+        self.assertEqual(years, [2008, 2020])
+
     def test_load_2_bibfiles (self):
         loader = BibLoader()
         bibtex_content_1 = '''
