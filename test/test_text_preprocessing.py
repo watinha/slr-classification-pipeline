@@ -1,7 +1,7 @@
 from unittest import TestCase
 from unittest.mock import Mock
 
-from lib.stopwords_filter import FilterStrategy, StopwordsFilter
+from lib.text_preprocessing import FilterStrategy, StopwordsFilter
 
 class FilterStrategyTest (TestCase):
 
