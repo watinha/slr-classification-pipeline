@@ -29,7 +29,6 @@ if (len(sys.argv) < 5):
     sys.exit(1)
 
 _, theme, classifier_name, k, ngram_range = sys.argv
-seed = 42
 
 slr_files = get_slr_files(theme)
 classifier, classifier_params = get_classifier(classifier_name)
@@ -39,7 +38,7 @@ X, y, years = load(slr_files)
 pipeline = Pipeline([
     ('preprocessing', FilterComposite([
         StopwordsFilter(), LemmatizerFilter() ])),
-    ('extractor', TfidfVectorizer()),
+    ('extractor', TfidfVectorizer(ngram_range=(1, int(ngram_range)))),
     ('feature_selection', SelectKBest(chi2, k=int(k))),
     ('classifier', GridSearchCV(classifier, classifier_params, cv=3))
 ])
