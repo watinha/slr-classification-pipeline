@@ -80,7 +80,7 @@ def get_classifier(classifier_name):
             'class_weight': [None, 'balanced']
         }
     else:
-        classifier = svm.LinearSVC(random_state=seed)
+        classifier = svm.LinearSVC(random_state=seed, fit_intercept=False)
         params = {
             'C': [1, 10, 100],
             'tol': [0.001, 0.1, 1],
