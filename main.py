@@ -1,9 +1,15 @@
 import sys
 
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.pipeline import Pipeline
+from sklearn.feature_selection import SelectKBest, chi2
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import cross_validate
 
 from config import get_slr_files, get_classifier
 from lib.bib_loader import load
+from lib.text_preprocessing import FilterComposite, StopwordsFilter, LemmatizerFilter
+from lib.years_split import YearsSplit
 
 
 if (len(sys.argv) < 2):
@@ -26,6 +32,20 @@ _, theme, classifier_name, k, ngram_range = sys.argv
 seed = 42
 
 slr_files = get_slr_files(theme)
-classifier = get_classifier(classifier_name)
+classifier, classifier_params = get_classifier(classifier_name)
 
 X, y, years = load(slr_files)
+
+pipeline = Pipeline([
+    ('preprocessing', FilterComposite([
+        StopwordsFilter(), LemmatizerFilter() ])),
+    ('extractor', TfidfVectorizer()),
+    ('feature_selection', SelectKBest(chi2, k=int(k))),
+    ('classifier', GridSearchCV(classifier, classifier_params, cv=3))
+])
+
+years_split = YearsSplit(n_split=3, years=years)
+scores = cross_validate(
+        pipeline, X, y, cv=years_split, groups=years,
+        scoring=['f1', 'precision', 'recall', 'roc_auc'])
+print(scores)

@@ -86,4 +86,4 @@ def get_classifier(classifier_name):
             'tol': [0.001, 0.1, 1],
             'class_weight': ['balanced', None]
         }
-    return classifier
+    return classifier, params
