@@ -17,12 +17,11 @@ class YearsSplitTest (TestCase):
 
         train, test = next(generator)
         self.assertEqual(train, [0, 1, 2, 3, 4])
-        self.assertEqual(test, [5, 6, 7, 8, 9, 10, 11, 12, 13, 14])
+        self.assertEqual(test, [5, 6, 7, 8, 9])
 
         train, test = next(generator)
         self.assertEqual(train, [0, 1])
-        self.assertEqual(test, [
-            2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14])
+        self.assertEqual(test, [2, 3, 4])
 
         with self.assertRaises(StopIteration):
             next(generator)
