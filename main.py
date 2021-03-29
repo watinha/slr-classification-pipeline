@@ -5,7 +5,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.feature_selection import SelectKBest, chi2
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import cross_validate
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MaxAbsScaler
 
 from config import get_slr_files, get_classifier
 from lib.bib_loader import load
@@ -40,7 +40,7 @@ pipeline = Pipeline([
     ('preprocessing', FilterComposite([
         StopwordsFilter(), LemmatizerFilter() ])),
     ('extractor', TfidfVectorizer(ngram_range=(1, int(ngram_range)))),
-    ('scaler', StandardScaler(with_mean=False)),
+    ('scaler', MaxAbsScaler()),
     ('feature_selection', SelectKBest(chi2, k=int(k))),
     ('classifier', GridSearchCV(classifier, classifier_params, cv=5))
 ])
