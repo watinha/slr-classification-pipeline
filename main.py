@@ -35,7 +35,7 @@ if (len(sys.argv) < 6):
     sys.exit(1)
 
 _, theme, classifier_name, k, ngram_range, titles = sys.argv
-titles = tiles == 'true' ? True : False
+titles = True if titles == 'true' else False
 
 slr_files = get_slr_files(theme)
 X, y, years = load(slr_files, titles_only=titles)
