@@ -2,3 +2,4 @@
 *.swp
 embedding/
 *.pyc
+result/*.csv
