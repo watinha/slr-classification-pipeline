@@ -55,9 +55,9 @@ def get_classifier(classifier_name):
     if (classifier_name == 'svm'):
         classifier = svm.SVC(random_state=seed, probability=True)
         params = {
-            'kernel': ['linear', 'rbf', 'poly', 'sigmoid'],
+            'kernel': ['linear', 'rbf', 'poly'],
             'C': [1, 10, 100],
-            'degree': [1, 2, 3],
+            'degree': [2, 3],
             'coef0': [0, 10, 100],
             'tol': [0.001, 0.1, 1],
             'class_weight': ['balanced', None]
