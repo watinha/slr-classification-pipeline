@@ -1,4 +1,4 @@
-import sys, np
+import sys, np, pandas as pd
 
 from sklearn import metrics
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -30,17 +30,24 @@ if (len(sys.argv) < 5):
     print('forth argument missing: ngram range (1:5)')
     sys.exit(1)
 
-_, theme, classifier_name, k, ngram_range = sys.argv
+if (len(sys.argv) < 6):
+    print('fifth argument missing: titles only?')
+    sys.exit(1)
+
+_, theme, classifier_name, k, ngram_range, titles = sys.argv
+titles = tiles == 'true' ? True : False
 
 slr_files = get_slr_files(theme)
-X, y, years = load(slr_files)
+X, y, years = load(slr_files, titles_only=titles)
 
 
 kfold = YearsSplit(n_split=3, years=years)
-correct_exclusion_rate = []
-threasholds = []
-missed = []
-fscore_threashold = []
+result = {
+    'fscore': [],
+    'threashold': [],
+    'missed': [],
+    'excluded': []
+}
 
 X = np.array(X)
 y = np.array(y)
@@ -54,25 +61,39 @@ for train_index, test_index in kfold.split(X, y):
         ('extractor', TfidfVectorizer(ngram_range=(1, int(ngram_range)))),
         ('scaler', MaxAbsScaler()),
         ('feature_selection', SelectKBest(chi2, k=int(k))),
-        ('classifier', GridSearchCV(classifier, classifier_params, cv=5))
+        ('classifier', GridSearchCV(classifier, classifier_params, cv=5, scoring='accuracy'))
     ])
 
     pipeline.fit(X_train, y_train)
     y_score = pipeline.predict_proba(X_train)[:, 1]
-    precision, recall, threasholds2 = metrics.precision_recall_curve(
+    precision, recall, threasholds = metrics.precision_recall_curve(
             y_train, y_score)
+
+    threashold = min(threasholds[0], 0.5)
+
     y_score = pipeline.predict_proba(X_test)[:, 1]
     matrix = metrics.confusion_matrix(
-            y_test, [ 0 if i < threasholds2[0] else 1 for i in y_score ])
-    correct_exclusion_rate.append(
+            y_test, [ 0 if i < threashold else 1 for i in y_score ])
+    result['fscore'].append(metrics.f1_score(
+        y_test, [ 0 if i < threashold else 1 for i in y_score ]))
+    result['threashold'].append(threashold)
+    result['excluded'].append(
             matrix[0, 0] /
             (matrix[0, 0] + matrix[1, 1] + matrix[0, 1] + matrix[1, 0]))
-    missed.append(matrix[1, 0] / (matrix[1, 1] + matrix[1, 0]))
-    threasholds.append(threasholds2[0])
-    fscore_threashold.append(metrics.f1_score(
-        y_test, [ 0 if i < threasholds2[0] else 1 for i in y_score ]))
+    result['missed'].append(matrix[1, 0] / (matrix[1, 1] + matrix[1, 0]))
 
-print(fscore_threashold)
-print(threasholds)
-print(missed)
-print(correct_exclusion_rate)
+
+reports = [ 'fscore', 'threashold', 'missed', 'excluded' ]
+for report in reports:
+    column_name = '%s-k%d' % (classifier_name, int(k))
+    labels = [('%s-%d' % (theme, i)) for i in range(3)]
+    report_filename = 'result/%s-%s.csv' % (report, theme)
+    df = pd.DataFrame({ column_name: result[report] }, index=labels)
+    try:
+        prior_df = pd.read_csv(report_filename, index_col=0)
+        new_df = prior_df.join(df)
+        new_df.to_csv(report_filename)
+    except FileNotFoundError:
+        df.to_csv(report_filename)
+
+sys.exit(0)
