@@ -1,5 +1,8 @@
 import sys, np, pandas as pd
 
+from keras.preprocessing.sequence import pad_sequences
+from keras.preprocessing.text import Tokenizer
+
 from sklearn import metrics
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.pipeline import Pipeline
@@ -8,7 +11,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import cross_validate
 from sklearn.preprocessing import MaxAbsScaler
 
-from config import get_slr_files, get_classifier
+from config import get_slr_files, get_classifier, get_embedding_classifier
 from lib.bib_loader import load
 from lib.text_preprocessing import FilterComposite, StopwordsFilter, LemmatizerFilter
 from lib.years_split import YearsSplit
@@ -19,7 +22,7 @@ if (len(sys.argv) < 2):
     sys.exit(1)
 
 if (len(sys.argv) < 3):
-    print('third argument missing: classifier (svm|dt|nn|rf|nb|lr|lsvm)')
+    print('third argument missing: classifier (svm|dt|rf|lsvm|embeddings_glove|embeddings_se)')
     sys.exit(1)
 
 if (len(sys.argv) < 4):
@@ -34,8 +37,14 @@ if (len(sys.argv) < 6):
     print('fifth argument missing: titles only?')
     sys.exit(1)
 
-_, theme, classifier_name, k, ngram_range, titles = sys.argv
+if (len(sys.argv) < 7):
+    print('sixth argument missing: padding sequence (for embeddings only!)')
+    sys.exit(1)
+
+_, theme, classifier_name, k, ngram_range, titles, maxlen = sys.argv
 titles = True if titles == 'true' else False
+embedding_dim = 200
+embedding_file = './embeddings/glove.6B.200d.txt' if classifier_name == 'embeddings_glove' else './embeddings/SO_vectors_200.bin'
 
 slr_files = get_slr_files(theme)
 X, y, years = load(slr_files, titles_only=titles)
@@ -54,15 +63,27 @@ y = np.array(y)
 for train_index, test_index in kfold.split(X, y):
     X_train, X_test = X[train_index], X[test_index]
     y_train, y_test = y[train_index], y[test_index]
-    classifier, classifier_params = get_classifier(classifier_name)
-    pipeline = Pipeline([
-        ('preprocessing', FilterComposite([
-            StopwordsFilter(), LemmatizerFilter() ])),
-        ('extractor', TfidfVectorizer(ngram_range=(1, int(ngram_range)))),
-        ('scaler', MaxAbsScaler()),
-        ('feature_selection', SelectKBest(chi2, k=int(k))),
-        ('classifier', GridSearchCV(classifier, classifier_params, cv=5, scoring='accuracy'))
-    ])
+
+    if classifier_name[:9] != 'embedding':
+        classifier, classifier_params = get_classifier(classifier_name)
+        pipeline = Pipeline([
+            ('preprocessing', FilterComposite([
+                StopwordsFilter(), LemmatizerFilter() ])),
+            ('extractor', TfidfVectorizer(ngram_range=(1, int(ngram_range)))),
+            ('scaler', MaxAbsScaler()),
+            ('feature_selection', SelectKBest(chi2, k=int(k))),
+            ('classifier', GridSearchCV(classifier, classifier_params, cv=5, scoring='accuracy'))
+        ])
+    else: # classifier_name == 'embeddings_glove' or 'embeddings_se'
+        tokenizer = Tokenizer(num_words=int(k))
+        tokenizer.fit_on_texts(X_train)
+        X_train = tokenizer.texts_to_sequences(X_train)
+        X_train = pad_sequences(X_train, padding='post', maxlen=int(maxlen))
+        X_test = tokenizer.texts_to_sequences(X_test)
+        X_test = pad_sequences(X_test, padding='post', maxlen=int(maxlen))
+        classifier, classifier_params = get_embedding_classifier(classifier_name, len(tokenizer.word_index) + 1,
+                embedding_dim, int(maxlen), tokenizer.word_index, embedding_file)
+        pipeline = GridSearchCV(classifier, classifier_params, cv=5, scoring='accuracy')
 
     pipeline.fit(X_train, y_train)
     y_score = pipeline.predict_proba(X_train)[:, 1]
