@@ -109,7 +109,7 @@ def get_glove (word_index, embedding_dim, embedding_file):
     return embedding_matrix
 
 
-def get_se (self, word_index, embedding_dim, embedding_file):
+def get_se (word_index, embedding_dim, embedding_file):
     se_embeddings = gensim.models.KeyedVectors.load_word2vec_format(embedding_file, binary=True)
     vocab_size = len(word_index) + 1  # Adding again 1 because of reserved 0 index
     embedding_matrix = np.zeros((vocab_size, embedding_dim))
