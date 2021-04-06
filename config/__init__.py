@@ -1,4 +1,4 @@
-import np
+import np, gensim
 
 from keras import layers
 from keras.models import Sequential
