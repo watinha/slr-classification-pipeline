@@ -12,7 +12,7 @@ from sklearn.model_selection import cross_validate
 from sklearn.preprocessing import MaxAbsScaler
 
 from config import get_slr_files, get_classifier, get_embedding_classifier
-from lib.embedding_vectorizer import AverageEmbeddingVectorizer
+from lib.embedding_vectorizer import AverageEmbeddingVectorizer, GloveLoader
 from lib.bib_loader import load
 from lib.text_preprocessing import FilterComposite, StopwordsFilter, LemmatizerFilter
 from lib.years_split import YearsSplit
@@ -84,7 +84,7 @@ for train_index, test_index in kfold.split(X, y):
             pipeline = Pipeline([
                 ('preprocessing', FilterComposite([
                     StopwordsFilter(), LemmatizerFilter() ])),
-                ('extractor', AverageEmbeddingVectorizer(embedding_file)),
+                ('extractor', AverageEmbeddingVectorizer(GloveLoader(embedding_file))),
                 ('scaler', MaxAbsScaler()),
                 ('classifier', GridSearchCV(classifier, classifier_params, cv=5, scoring='accuracy'))
             ])
