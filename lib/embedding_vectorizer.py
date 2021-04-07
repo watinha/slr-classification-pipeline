@@ -1,5 +1,6 @@
 import np
 
+from gensim.models import KeyedVectors
 from nltk.tokenize import word_tokenize
 
 class AverageEmbeddingVectorizer():
@@ -50,3 +51,21 @@ class GloveLoader:
         return word_index
 
 
+class SELoader:
+
+    def __init__ (self, filename):
+        self._filename = filename
+
+    def build_word_index (self, word_list):
+        word_index = {}
+        word_vecs = KeyedVectors.load_word2vec_format(
+                self._filename, binary=True)
+
+        for word in word_list:
+            try:
+                word_index[word] = np.array(
+                        word_vecs.get_vector(word), dtype=np.float32)
+            except KeyError:
+                pass
+
+        return word_index

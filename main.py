@@ -12,7 +12,7 @@ from sklearn.model_selection import cross_validate
 from sklearn.preprocessing import MaxAbsScaler
 
 from config import get_slr_files, get_classifier, get_embedding_classifier
-from lib.embedding_vectorizer import AverageEmbeddingVectorizer, GloveLoader
+from lib.embedding_vectorizer import AverageEmbeddingVectorizer, GloveLoader, SELoader
 from lib.bib_loader import load
 from lib.text_preprocessing import FilterComposite, StopwordsFilter, LemmatizerFilter
 from lib.years_split import YearsSplit
@@ -43,7 +43,7 @@ if (len(sys.argv) < 7):
     sys.exit(1)
 
 if (len(sys.argv) < 8):
-    print('seventh argument missing: extrator (tfidf,embeddings_glove)')
+    print('seventh argument missing: extrator (tfidf,embeddings_glove,embeddings_se)')
     sys.exit(1)
 
 _, theme, classifier_name, k, ngram_range, titles, maxlen, extractor = sys.argv
@@ -53,7 +53,6 @@ embedding_file = './embeddings/glove.6B.200d.txt' if classifier_name == 'embeddi
 
 slr_files = get_slr_files(theme)
 X, y, years = load(slr_files, titles_only=titles)
-
 
 kfold = YearsSplit(n_split=3, years=years)
 result = {
@@ -80,11 +79,19 @@ for train_index, test_index in kfold.split(X, y):
                 ('feature_selection', SelectKBest(chi2, k=int(k))),
                 ('classifier', GridSearchCV(classifier, classifier_params, cv=5, scoring='accuracy'))
             ])
-        else:
+        elif extractor == 'embeddings_glove':
             pipeline = Pipeline([
                 ('preprocessing', FilterComposite([
                     StopwordsFilter(), LemmatizerFilter() ])),
                 ('extractor', AverageEmbeddingVectorizer(GloveLoader(embedding_file))),
+                ('scaler', MaxAbsScaler()),
+                ('classifier', GridSearchCV(classifier, classifier_params, cv=5, scoring='accuracy'))
+            ])
+        else:
+            pipeline = Pipeline([
+                ('preprocessing', FilterComposite([
+                    StopwordsFilter(), LemmatizerFilter() ])),
+                ('extractor', AverageEmbeddingVectorizer(SELoader(embedding_file))),
                 ('scaler', MaxAbsScaler()),
                 ('classifier', GridSearchCV(classifier, classifier_params, cv=5, scoring='accuracy'))
             ])
