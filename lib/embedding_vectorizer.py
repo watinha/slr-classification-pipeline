@@ -30,7 +30,12 @@ class AverageEmbeddingVectorizer():
                     else:
                         vec = vec + word_index[word]
                     n_words = n_words + 1
-            result.append(vec / n_words)
+
+            if vec is None:
+                result.append(np.zeros(
+                    list(word_index.items())[0][1].shape))
+            else:
+                result.append(vec / n_words)
 
         return np.array(result)
 

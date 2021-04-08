@@ -95,6 +95,47 @@ class AverageEmbeddingVectorizerTest (TestCase):
             [2.5, 6.5],
             [7.0, 5.0]], result.tolist())
 
+    def test_sentences_with_no_word_in_word_index (self):
+        corpus = ['nova alternativa de jogo',
+                  'alternativa terceira alternativa legal',
+                  'natal sem nenhuma palavra',
+                  'outra sentenca']
+        vectorizer = AverageEmbeddingVectorizer(
+                GloveLoader('glove.2d.txt'))
+        mock = mock_open()
+        mock.return_value.__iter__.return_value = iter([
+            'nova 3 9', 'nada 3 10', 'de 9 1',
+            'jogo 12 2', 'terceira 4 11',
+            'outra 13 9', 'sentenca 1 1',
+            'legal 1 2', 'nothing 12 13', 'ultra 4 5'])
+
+        with patch('lib.embedding_vectorizer.open', mock):
+            result = vectorizer.transform(corpus)
+
+        mock.assert_called_with('glove.2d.txt')
+        self.assertEqual([
+            [8.0, 4.0],
+            [2.5, 6.5],
+            [0.0, 0.0],
+            [7.0, 5.0]], result.tolist())
+
+    def test_sentences_with_no_word_in_index_with_3d (self):
+        corpus = ['natal sem nenhuma palavra',
+                  'outra sentenca']
+        vectorizer = AverageEmbeddingVectorizer(
+                GloveLoader('glove.3d.txt'))
+        mock = mock_open()
+        mock.return_value.__iter__.return_value = iter([
+            'outra 1 1 1', 'sentenca 1 1 1', 'ultra 4 5 6'])
+
+        with patch('lib.embedding_vectorizer.open', mock):
+            result = vectorizer.transform(corpus)
+
+        mock.assert_called_with('glove.3d.txt')
+        self.assertEqual([
+            [0.0, 0.0, 0.0],
+            [1.0, 1.0, 1.0]], result.tolist())
+
     def test_vectorize_implements_fit_interface (self):
         X_stub, y_stub = [], []
         vectorizer = AverageEmbeddingVectorizer(
