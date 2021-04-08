@@ -5,6 +5,7 @@ import np, gensim
 #from keras.wrappers.scikit_learn import KerasClassifier
 
 from sklearn import tree, metrics, svm, naive_bayes, ensemble, linear_model, neural_network
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_selection import chi2, f_classif
 
 from lib.embedding_vectorizer import AverageEmbeddingVectorizer, GloveLoader, SELoader
@@ -65,46 +66,46 @@ def get_classifier(classifier_name):
         classifier = svm.SVC(random_state=seed, probability=True)
         params = {
             #'kernel': ['linear', 'rbf', 'poly'],
-            'kernel': ['linear', 'rbf'],
-            'C': [1, 10, 100],
+            'classifier__kernel': ['linear', 'rbf'],
+            'classifier__C': [1, 10, 100],
             #'degree': [2, 3],
-            'coef0': [0, 10, 100],
-            'tol': [0.001, 0.1, 1],
-            'class_weight': ['balanced', None]
+            'classifier__coef0': [0, 10, 100],
+            'classifier__tol': [0.001, 0.1, 1],
+            'classifier__class_weight': ['balanced', None]
         }
     elif (classifier_name == 'dt'):
         classifier = tree.DecisionTreeClassifier(random_state=seed)
         params = {
-            'criterion': ["gini", "entropy"],
-            'max_depth': [10, 50, 100, None],
-            'min_samples_split': [2, 10, 100],
-            'class_weight': [None, 'balanced']
+            'classifier__criterion': ["gini", "entropy"],
+            'classifier__max_depth': [10, 50, 100, None],
+            'classifier__min_samples_split': [2, 10, 100],
+            'classifier__class_weight': [None, 'balanced']
         }
     elif (classifier_name == 'rf'):
         classifier = ensemble.RandomForestClassifier(random_state=seed)
         params = {
-            'n_estimators': [5, 10, 100],
-            'criterion': ["gini", "entropy"],
-            'max_depth': [10, 50, 100, None],
-            'min_samples_split': [2, 10, 100],
-            'class_weight': [None, 'balanced']
+            'classifier__n_estimators': [5, 10, 100],
+            'classifier__criterion': ["gini", "entropy"],
+            'classifier__max_depth': [10, 50, 100, None],
+            'classifier__min_samples_split': [2, 10, 100],
+            'classifier__class_weight': [None, 'balanced']
         }
     else:
         classifier = svm.LinearSVC(random_state=seed, fit_intercept=False)
         params = {
-            'C': [1, 10, 100],
-            'tol': [0.001, 0.1, 1],
-            'class_weight': ['balanced', None]
+            'classifier__C': [1, 10, 100],
+            'classifier__tol': [0.001, 0.1, 1],
+            'classifier__class_weight': ['balanced', None]
         }
     return classifier, params
 
-def get_extractor (extractor_name, k, embedding_file=None):
+def get_extractor (extractor_name, ngram_range, embedding_file=None):
     if extractor_name == 'tfidf':
-        return TfidfVectorizer(ngram_range=(1, int(ngram_range))), chi2, int(k)
+        return TfidfVectorizer(ngram_range=(1, int(ngram_range))), chi2, { 'feature_selection__k': [100, 300, 500, 'all'] }
     elif extractor_name == 'embeddings_glove':
-        return AverageEmbeddingVectorizer(GloveLoader(embedding_file)), f_classif, 'all'
+        return AverageEmbeddingVectorizer(GloveLoader(embedding_file)), f_classif, { 'feature_selection__k': ['all'] }
     else:
-        return AverageEmbeddingVectorizer(SELoader(embedding_file)), f_classif, 'all'
+        return AverageEmbeddingVectorizer(SELoader(embedding_file)), f_classif, { 'feature_selection__k': ['all'] }
 
 
 #def get_glove (word_index, embedding_dim, embedding_file):

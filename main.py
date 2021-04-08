@@ -4,7 +4,6 @@ import sys, np, pandas as pd
 #from keras.preprocessing.text import Tokenizer
 
 from sklearn import metrics
-from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.pipeline import Pipeline
 from sklearn.feature_selection import SelectKBest
 from sklearn.model_selection import GridSearchCV
@@ -26,26 +25,22 @@ if (len(sys.argv) < 3):
     sys.exit(1)
 
 if (len(sys.argv) < 4):
-    print('forth argument missing: number of features')
-    sys.exit(1)
-
-if (len(sys.argv) < 5):
     print('forth argument missing: ngram range (1:5)')
     sys.exit(1)
 
-if (len(sys.argv) < 6):
+if (len(sys.argv) < 5):
     print('fifth argument missing: titles only?')
     sys.exit(1)
 
-if (len(sys.argv) < 7):
+if (len(sys.argv) < 6):
     print('sixth argument missing: padding sequence (for embeddings only!)')
     sys.exit(1)
 
-if (len(sys.argv) < 8):
+if (len(sys.argv) < 7):
     print('seventh argument missing: extrator (tfidf,embeddings_glove,embeddings_se)')
     sys.exit(1)
 
-_, theme, classifier_name, k, ngram_range, titles, maxlen, extractor = sys.argv
+_, theme, classifier_name, ngram_range, titles, maxlen, extractor = sys.argv
 titles = True if titles == 'true' else False
 embedding_dim = 200
 embedding_file = './embeddings/glove.6B.200d.txt' if classifier_name == 'embeddings_glove' or extractor == 'embeddings_glove' else './embeddings/SO_vectors_200.bin'
@@ -69,14 +64,18 @@ for train_index, test_index in kfold.split(X, y):
 
     if classifier_name[:9] != 'embedding':
         classifier, classifier_params = get_classifier(classifier_name)
-        extractor_class, selector_f, k = get_extractor(extractor, k, embedding_file)
+        extractor_class, selector_f, selector_params = get_extractor(extractor, ngram_range, embedding_file)
+        classifier_params.update(selector_params)
+        classifier_pipeline = GridSearchCV(Pipeline([
+            ('feature_selection', SelectKBest(selector_f)),
+            ('classifier', classifier)
+        ]), classifier_params, cv=5, scoring='accuracy')
         pipeline = Pipeline([
             ('preprocessing', FilterComposite([
                 StopwordsFilter(), LemmatizerFilter() ])),
             ('extractor', extractor_class),
             ('scaler', MaxAbsScaler()),
-            ('feature_selection', SelectKBest(selector_f, k=k)),
-            ('classifier', GridSearchCV(classifier, classifier_params, cv=5, scoring='accuracy'))
+            ('classifier', classifier_pipeline)
         ])
 
     else: # classifier_name == 'embeddings_glove' or 'embeddings_se'
@@ -109,10 +108,9 @@ for train_index, test_index in kfold.split(X, y):
             (matrix[0, 0] + matrix[1, 1] + matrix[0, 1] + matrix[1, 0]))
     result['missed'].append(matrix[1, 0] / (matrix[1, 1] + matrix[1, 0]))
 
-
 reports = [ 'fscore', 'threashold', 'missed', 'excluded' ]
 for report in reports:
-    column_name = '%s-k%s-%s' % (classifier_name, str(k), extractor)
+    column_name = '%s-%s' % (classifier_name, extractor)
     labels = [('%s-%d' % (theme, i)) for i in range(3)]
     report_filename = 'result/%s-%s.csv' % (report, theme)
     df = pd.DataFrame({ column_name: result[report] }, index=labels)
