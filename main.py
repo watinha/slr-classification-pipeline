@@ -1,18 +1,17 @@
 import sys, np, pandas as pd
 
-from keras.preprocessing.sequence import pad_sequences
-from keras.preprocessing.text import Tokenizer
+#from keras.preprocessing.sequence import pad_sequences
+#from keras.preprocessing.text import Tokenizer
 
 from sklearn import metrics
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.pipeline import Pipeline
-from sklearn.feature_selection import SelectKBest, chi2
+from sklearn.feature_selection import SelectKBest
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import cross_validate
 from sklearn.preprocessing import MaxAbsScaler
 
-from config import get_slr_files, get_classifier, get_embedding_classifier
-from lib.embedding_vectorizer import AverageEmbeddingVectorizer, GloveLoader, SELoader
+from config import get_slr_files, get_classifier, get_extractor#, get_embedding_classifier
 from lib.bib_loader import load
 from lib.text_preprocessing import FilterComposite, StopwordsFilter, LemmatizerFilter
 from lib.years_split import YearsSplit
@@ -70,41 +69,27 @@ for train_index, test_index in kfold.split(X, y):
 
     if classifier_name[:9] != 'embedding':
         classifier, classifier_params = get_classifier(classifier_name)
-        if extractor == 'tfidf':
-            pipeline = Pipeline([
-                ('preprocessing', FilterComposite([
-                    StopwordsFilter(), LemmatizerFilter() ])),
-                ('extractor', TfidfVectorizer(ngram_range=(1, int(ngram_range)))),
-                ('scaler', MaxAbsScaler()),
-                ('feature_selection', SelectKBest(chi2, k=int(k))),
-                ('classifier', GridSearchCV(classifier, classifier_params, cv=5, scoring='accuracy'))
-            ])
-        elif extractor == 'embeddings_glove':
-            pipeline = Pipeline([
-                ('preprocessing', FilterComposite([
-                    StopwordsFilter(), LemmatizerFilter() ])),
-                ('extractor', AverageEmbeddingVectorizer(GloveLoader(embedding_file))),
-                ('scaler', MaxAbsScaler()),
-                ('classifier', GridSearchCV(classifier, classifier_params, cv=5, scoring='accuracy'))
-            ])
-        else:
-            pipeline = Pipeline([
-                ('preprocessing', FilterComposite([
-                    StopwordsFilter(), LemmatizerFilter() ])),
-                ('extractor', AverageEmbeddingVectorizer(SELoader(embedding_file))),
-                ('scaler', MaxAbsScaler()),
-                ('classifier', GridSearchCV(classifier, classifier_params, cv=5, scoring='accuracy'))
-            ])
+        extractor_class, selector_f, k = get_extractor(extractor, k, embedding_file)
+        pipeline = Pipeline([
+            ('preprocessing', FilterComposite([
+                StopwordsFilter(), LemmatizerFilter() ])),
+            ('extractor', extractor_class),
+            ('scaler', MaxAbsScaler()),
+            ('feature_selection', SelectKBest(selector_f, k=k)),
+            ('classifier', GridSearchCV(classifier, classifier_params, cv=5, scoring='accuracy'))
+        ])
+
     else: # classifier_name == 'embeddings_glove' or 'embeddings_se'
-        tokenizer = Tokenizer(num_words=int(k))
-        tokenizer.fit_on_texts(X_train)
-        X_train = tokenizer.texts_to_sequences(X_train)
-        X_train = pad_sequences(X_train, padding='post', maxlen=int(maxlen))
-        X_test = tokenizer.texts_to_sequences(X_test)
-        X_test = pad_sequences(X_test, padding='post', maxlen=int(maxlen))
-        classifier, classifier_params = get_embedding_classifier(classifier_name, len(tokenizer.word_index) + 1,
-                embedding_dim, int(maxlen), tokenizer.word_index, embedding_file)
-        pipeline = GridSearchCV(classifier, classifier_params, cv=5, scoring='accuracy')
+        pass
+        #tokenizer = Tokenizer(num_words=int(k))
+        #tokenizer.fit_on_texts(X_train)
+        #X_train = tokenizer.texts_to_sequences(X_train)
+        #X_train = pad_sequences(X_train, padding='post', maxlen=int(maxlen))
+        #X_test = tokenizer.texts_to_sequences(X_test)
+        #X_test = pad_sequences(X_test, padding='post', maxlen=int(maxlen))
+        #classifier, classifier_params = get_embedding_classifier(classifier_name, len(tokenizer.word_index) + 1,
+        #        embedding_dim, int(maxlen), tokenizer.word_index, embedding_file)
+        #pipeline = GridSearchCV(classifier, classifier_params, cv=5, scoring='accuracy')
 
     pipeline.fit(X_train, y_train)
     y_score = pipeline.predict_proba(X_train)[:, 1]
@@ -127,7 +112,7 @@ for train_index, test_index in kfold.split(X, y):
 
 reports = [ 'fscore', 'threashold', 'missed', 'excluded' ]
 for report in reports:
-    column_name = '%s-k%d' % (classifier_name, int(k))
+    column_name = '%s-k%s-%s' % (classifier_name, str(k), extractor)
     labels = [('%s-%d' % (theme, i)) for i in range(3)]
     report_filename = 'result/%s-%s.csv' % (report, theme)
     df = pd.DataFrame({ column_name: result[report] }, index=labels)

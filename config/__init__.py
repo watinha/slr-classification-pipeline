@@ -1,10 +1,13 @@
 import np, gensim
 
-from keras import layers
-from keras.models import Sequential
-from keras.wrappers.scikit_learn import KerasClassifier
+##from keras import layers
+#from keras.models import Sequential
+#from keras.wrappers.scikit_learn import KerasClassifier
 
 from sklearn import tree, metrics, svm, naive_bayes, ensemble, linear_model, neural_network
+from sklearn.feature_selection import chi2, f_classif
+
+from lib.embedding_vectorizer import AverageEmbeddingVectorizer, GloveLoader, SELoader
 
 slrs_files = {
     'games': {
@@ -95,67 +98,75 @@ def get_classifier(classifier_name):
         }
     return classifier, params
 
-
-def get_glove (word_index, embedding_dim, embedding_file):
-    vocab_size = len(word_index) + 1  # Adding again 1 because of reserved 0 index
-    embedding_matrix = np.zeros((vocab_size, embedding_dim))
-    with open(embedding_file) as f:
-        for line in f:
-            word, *vector = line.split()
-            if word in word_index:
-                idx = word_index[word]
-                embedding_matrix[idx] = np.array(
-                    vector, dtype=np.float32)[:embedding_dim]
-    return embedding_matrix
-
-
-def get_se (word_index, embedding_dim, embedding_file):
-    se_embeddings = gensim.models.KeyedVectors.load_word2vec_format(embedding_file, binary=True)
-    vocab_size = len(word_index) + 1  # Adding again 1 because of reserved 0 index
-    embedding_matrix = np.zeros((vocab_size, embedding_dim))
-    not_found = []
-
-    for word in word_index.keys():
-        try:
-            idx = word_index[word]
-            embedding_matrix[idx] = np.array(
-                se_embeddings.get_vector(word), dtype=np.float32)[:embedding_dim]
-        except:
-            not_found.append(word)
-
-    print('Not in embedding: %s...' % (not_found))
-    return embedding_matrix
-
-
-def get_embedding_classifier (classifier_name, vocab_size, embedding_dim, maxlen, word_index, embedding_file):
-    embedding_matrix = None
-    if (classifier_name == 'embeddings_glove'):
-        embedding_matrix = get_glove(word_index, embedding_dim, embedding_file)
+def get_extractor (extractor_name, k, embedding_file=None):
+    if extractor_name == 'tfidf':
+        return TfidfVectorizer(ngram_range=(1, int(ngram_range))), chi2, int(k)
+    elif extractor_name == 'embeddings_glove':
+        return AverageEmbeddingVectorizer(GloveLoader(embedding_file)), f_classif, 'all'
     else:
-        embedding_matrix = get_se(word_index, embedding_dim, embedding_file)
+        return AverageEmbeddingVectorizer(SELoader(embedding_file)), f_classif, 'all'
 
 
-    def create_model (filters=32, kernel_size=3, neurons=1, trainable=True):
-        model = Sequential()
-        model.add(layers.Embedding(input_dim=vocab_size,
-                                   output_dim=embedding_dim,
-                                   weights=[embedding_matrix],
-                                   input_length=maxlen,
-                                   trainable=trainable))
-        model.add(layers.Conv1D(filters, kernel_size, activation='relu'))
-        model.add(layers.GlobalMaxPooling1D())
-        model.add(layers.Dense(neurons, activation='relu'))
-        model.add(layers.Dense(1, activation='sigmoid'))
-        model.compile(loss="binary_crossentropy", optimizer="adam", metrics=["accuracy"])
-        model.summary()
-        return model
-
-
-    model = KerasClassifier(build_fn=create_model, epochs=250, verbose=0)
-    params = {
-        'filters': [32],
-        'kernel_size': [2, 3],
-        'neurons': [10, 20],
-        'trainable': [True, False]
-    }
-    return model, params
+#def get_glove (word_index, embedding_dim, embedding_file):
+#    vocab_size = len(word_index) + 1  # Adding again 1 because of reserved 0 index
+#    embedding_matrix = np.zeros((vocab_size, embedding_dim))
+#    with open(embedding_file) as f:
+#        for line in f:
+#            word, *vector = line.split()
+#            if word in word_index:
+#                idx = word_index[word]
+#                embedding_matrix[idx] = np.array(
+#                    vector, dtype=np.float32)[:embedding_dim]
+#    return embedding_matrix
+#
+#
+#def get_se (word_index, embedding_dim, embedding_file):
+#    se_embeddings = gensim.models.KeyedVectors.load_word2vec_format(embedding_file, binary=True)
+#    vocab_size = len(word_index) + 1  # Adding again 1 because of reserved 0 index
+#    embedding_matrix = np.zeros((vocab_size, embedding_dim))
+#    not_found = []
+#
+#    for word in word_index.keys():
+#        try:
+#            idx = word_index[word]
+#            embedding_matrix[idx] = np.array(
+#                se_embeddings.get_vector(word), dtype=np.float32)[:embedding_dim]
+#        except:
+#            not_found.append(word)
+#
+#    print('Not in embedding: %s...' % (not_found))
+#    return embedding_matrix
+#
+#
+#def get_embedding_classifier (classifier_name, vocab_size, embedding_dim, maxlen, word_index, embedding_file):
+#    embedding_matrix = None
+#    if (classifier_name == 'embeddings_glove'):
+#        embedding_matrix = get_glove(word_index, embedding_dim, embedding_file)
+#    else:
+#        embedding_matrix = get_se(word_index, embedding_dim, embedding_file)
+#
+#
+#    def create_model (filters=32, kernel_size=3, neurons=1, trainable=True):
+#        model = Sequential()
+#        model.add(layers.Embedding(input_dim=vocab_size,
+#                                   output_dim=embedding_dim,
+#                                   weights=[embedding_matrix],
+#                                   input_length=maxlen,
+#                                   trainable=trainable))
+#        model.add(layers.Conv1D(filters, kernel_size, activation='relu'))
+#        model.add(layers.GlobalMaxPooling1D())
+#        model.add(layers.Dense(neurons, activation='relu'))
+#        model.add(layers.Dense(1, activation='sigmoid'))
+#        model.compile(loss="binary_crossentropy", optimizer="adam", metrics=["accuracy"])
+#        model.summary()
+#        return model
+#
+#
+#    model = KerasClassifier(build_fn=create_model, epochs=250, verbose=0)
+#    params = {
+#        'filters': [32],
+#        'kernel_size': [2, 3],
+#        'neurons': [10, 20],
+#        'trainable': [True, False]
+#    }
+#    return model, params
