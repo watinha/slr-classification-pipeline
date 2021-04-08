@@ -1,7 +1,7 @@
 import sys, np, pandas as pd
 
-#from keras.preprocessing.sequence import pad_sequences
-#from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.sequence import pad_sequences
+from keras.preprocessing.text import Tokenizer
 
 from sklearn import metrics
 from sklearn.pipeline import Pipeline
@@ -10,7 +10,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import cross_validate
 from sklearn.preprocessing import MaxAbsScaler
 
-from config import get_slr_files, get_classifier, get_extractor#, get_embedding_classifier
+from config import get_slr_files, get_classifier, get_extractor, get_embedding_classifier
 from lib.bib_loader import load
 from lib.text_preprocessing import FilterComposite, StopwordsFilter, LemmatizerFilter
 from lib.years_split import YearsSplit
@@ -79,16 +79,17 @@ for train_index, test_index in kfold.split(X, y):
         ])
 
     else: # classifier_name == 'embeddings_glove' or 'embeddings_se'
-        pass
-        #tokenizer = Tokenizer(num_words=int(k))
-        #tokenizer.fit_on_texts(X_train)
-        #X_train = tokenizer.texts_to_sequences(X_train)
-        #X_train = pad_sequences(X_train, padding='post', maxlen=int(maxlen))
-        #X_test = tokenizer.texts_to_sequences(X_test)
-        #X_test = pad_sequences(X_test, padding='post', maxlen=int(maxlen))
-        #classifier, classifier_params = get_embedding_classifier(classifier_name, len(tokenizer.word_index) + 1,
-        #        embedding_dim, int(maxlen), tokenizer.word_index, embedding_file)
-        #pipeline = GridSearchCV(classifier, classifier_params, cv=5, scoring='accuracy')
+        f = FilterComposite([ StopwordsFilter(), LemmatizerFilter() ])
+        X_train, X_test = f.transform(X_train), f.transform(X_test)
+        tokenizer = Tokenizer() #Tokenizer(num_words=int(k))
+        tokenizer.fit_on_texts(X_train)
+        X_train = tokenizer.texts_to_sequences(X_train)
+        X_train = pad_sequences(X_train, padding='post', maxlen=int(maxlen))
+        X_test = tokenizer.texts_to_sequences(X_test)
+        X_test = pad_sequences(X_test, padding='post', maxlen=int(maxlen))
+        classifier, classifier_params = get_embedding_classifier(classifier_name, len(tokenizer.word_index) + 1,
+                embedding_dim, int(maxlen), tokenizer.word_index, embedding_file)
+        pipeline = GridSearchCV(classifier, classifier_params, cv=5, scoring='accuracy')
 
     pipeline.fit(X_train, y_train)
     y_score = pipeline.predict_proba(X_train)[:, 1]
