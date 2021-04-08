@@ -20,6 +20,9 @@ class FilterCompositeTest (TestCase):
         self.assertEqual(fil, s)
         self.assertEqual([], res)
 
+        self.assertEqual({}, fil.get_params())
+        self.assertEqual({}, fil.get_params(False))
+
 
     def test_fit_transform(self):
         X = []
